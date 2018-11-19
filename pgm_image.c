@@ -99,7 +99,55 @@ void playGame(image_t * image)
     // Get the memory for the image data
     allocateImage(&destination);
 
-    
+    // Check the neighbors of all pixels
+    for (int row = 0; row < image->height; row++)
+    {
+        for (int column = 0; column < image->width; column++)
+        {
+            for (int matrixRow = -1; matrixRow <= 1; matrixRow++) {
+                for (int matrixColumn = -1; matrixColumn <= 1; matrixColumn++) {
+                    int r = row+matrixRow;
+                    int c = column+matrixColumn;
+                    if (r < 0) {
+                        r = image->height - 1;
+                    } else if (r == image->height) {
+                        r = 0;
+                    }
+                    if (c < 0) {
+                        c = image->width - 1;
+                    } else if (r == image->width) {
+                        c = 0;
+                    }
+                    double_matrix[matrixRow+1][matrixColumn+1] = image->pixels[r][c].value;
+                }
+            }
+            destination.pixels[row][column].value = checkNeighbors(double_matrix);
+        }
+    }
+
+    // Free the previous memory data
+    freeImage(image);
+    // Copy the results back to the pointer received
+    *image = destination;
+}
+
+void playGameOMP(image_t * image)
+{
+    // Local variable for an image structure
+    image_t destination = {0, 0, NULL};
+
+    // Local variable for using easier the matrix array
+    int double_matrix[3][3] = {0};
+
+    // Copy the size of the image
+    destination.height = image->height;
+    destination.width = image->width;
+
+    // Get the memory for the image data
+    allocateImage(&destination);
+
+    // Make the paralelism with Open MP
+    #pragma omp parallel for collapse(2) private(double_matrix)
     // Check the neighbors of all pixels
     for (int row = 0; row < image->height; row++)
     {

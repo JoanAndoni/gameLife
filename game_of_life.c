@@ -26,8 +26,7 @@
 
 ///// Function declarations /////
 void usage(const char * program);
-void lifeSimulation(int iterations, char * start_file);
-void lifeSimulationOMP(int iterations, char * start_file);
+void lifeSimulation(int iterations, char * start_file, int option);
 void lifeSimulationThreads(int iterations, char * start_file);
 
 int main(int argc, char * argv [])
@@ -66,7 +65,7 @@ int main(int argc, char * argv [])
     if (option == 1) {
         // Run the simulation with the iterations specified
         printf("\nRunning the simulation with file '%s' using %d iterations and OpenMP\n", start_file, iterations);
-        lifeSimulationOMP(iterations, start_file);
+        lifeSimulation(iterations, start_file, option);
     } else if (option == 2) {
         // Run the simulation with the iterations specified
         printf("\nRunning the simulation with file '%s' using %d iterations and manual threads\n", start_file, iterations);
@@ -74,7 +73,7 @@ int main(int argc, char * argv [])
     } else {
         // Run the simulation with the iterations specified
         printf("\nRunning the simulation with file '%s' using %d iterations without threads\n", start_file, iterations);
-        lifeSimulation(iterations, start_file);
+        lifeSimulation(iterations, start_file, 0);
     }
 
     return 0;
@@ -88,7 +87,7 @@ void usage(const char * program)
 }
 
 // Main loop for the simulation
-void lifeSimulation(int iterations, char * start_file)
+void lifeSimulation(int iterations, char * start_file, int option)
 {
     // Create the image variables and initialize to be empty
     image_t board = {0, 0, NULL};
@@ -110,50 +109,13 @@ void lifeSimulation(int iterations, char * start_file)
         // Create an array that will have the name of the files on every iteration
         char buffer[32] = { 0 };
 
-        //Play the game without paralelism
-        playGame(&board);
-
-        // Add the file name and the sub carpet to save the files
-        sprintf(buffer, "Images/%s_%d.pgm", start_file, i);
-
-        // Add the data of the board to the image
-        imagePGM.image = board;
-
-        // Save the new image
-        writePGMFile(buffer, &imagePGM);
-    }
-
-    // Liberate the memory used for the structure
-    freeImage(&(imagePGM.image));
-    printf("\nThe execution time is : %f s\n", omp_get_wtime()-start);
-    printf("\nThe images are successfully write in the folder of Images\n");
-}
-
-// Main loop for the simulation with threads
-void lifeSimulationOMP(int iterations, char * start_file)
-{
-    // Create the image variables and initialize to be empty
-    image_t board = {0, 0, NULL};
-
-    // Put the board into a image
-    pgm_t imagePGM = { "P5", 2};
-
-    //Read the board to put it into the image format
-    readBoard(start_file, &board);
-
-    // Erase the last 4 characters of the name of the file
-    start_file[strlen(start_file) - 4] = '\0' ;
-    start_file = &start_file[7];
-
-    // Start the time to count the execution
-    double start = omp_get_wtime();
-
-    for (int i = 0; i < iterations; i++) {
-        // Create an array that will have the name of the files on every iteration
-        char buffer[32] = { 0 };
-
-        //Play the game without paralelism
-        playGame(&board);
+        if (option == 1) {
+            // Play the game with OMP
+            playGameOMP(&board);
+        } else {
+            // Play the game
+            playGame(&board);
+        }
 
         // Add the file name and the sub carpet to save the files
         sprintf(buffer, "Images/%s_%d.pgm", start_file, i);

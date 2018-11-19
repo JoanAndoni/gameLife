@@ -57,7 +57,7 @@ void allocateImage(image_t * image);
 void freeImage(image_t * image);
 void readBoard(const char * filename, image_t * image);
 void playGame(image_t * image);
-void playGameBoards(image_t * image);
+void playGameOMP(image_t * image);
 int checkNeighbors(int matrix[3][3]);
 void writePGMFile(const char * filename, const pgm_t * pgm_image);
 void writePGMTextData(const pgm_t * pgm_image, FILE * file_ptr);
