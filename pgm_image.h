@@ -17,9 +17,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include "string_functions.h"
+// ADD YOUR EXTRA LIBRARIES HERE
+#include <omp.h>
+#include <time.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <sys/time.h>
 
 // Constant for the size of strings to be read from a PGM file header
 #define LINE_SIZE 255
+#define NUM_THREADS 4
 
 //// TYPE DECLARATIONS
 
@@ -47,9 +54,9 @@ typedef struct pgm_struct
 
 //Struct for thread data
 typedef struct data_struct {
-    int startingLine;
-    int step;
-    pgm_t * image;
+    int start;
+    int steps;
+    image_t * image;
 } data_t;
 
 //// FUNCTION PROTOTYPES
@@ -58,6 +65,8 @@ void freeImage(image_t * image);
 void readBoard(const char * filename, image_t * image);
 void playGame(image_t * image);
 void playGameOMP(image_t * image);
+void playGameThreads(image_t * image);
+void * threadsGame(void * arg);
 int checkNeighbors(int matrix[3][3]);
 void writePGMFile(const char * filename, const pgm_t * pgm_image);
 void writePGMTextData(const pgm_t * pgm_image, FILE * file_ptr);

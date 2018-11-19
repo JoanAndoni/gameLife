@@ -14,7 +14,8 @@
 
 #include "pgm_image.h"
 
-//// FUNCTION DECLARATIONS
+// Initialize the mutex to help the threads to not share memory
+pthread_mutex_t lock;
 
 // Generate space to store the image in memory
 void allocateImage(image_t * image)
@@ -81,8 +82,6 @@ void readBoard(const char * filename, image_t * image)
     fclose(file_ptr);
     printf("Done!\n");
 }
-
-
 
 void playGame(image_t * image)
 {
@@ -180,6 +179,106 @@ void playGameOMP(image_t * image)
     *image = destination;
 }
 
+void playGameThreads(image_t * image)
+{
+    // Set the data that is going to be sended to the threads
+    data_t * thread_data = NULL;
+    pthread_t tid[NUM_THREADS];
+
+    // Make the calculations to split the iterations
+    int stepsPerThread = image->height / NUM_THREADS;
+    int stepsLeft = image->height % NUM_THREADS;
+    int start = 0;
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        // Allocate memory for the information that is going to be
+        // sended to the thread
+        thread_data = malloc (sizeof (data_t));
+
+        // Fill the data of the thread with the iterations
+        thread_data->start = start;
+        thread_data->steps = stepsPerThread;
+        thread_data->image = image;
+
+        // Check if there is some iterations that have to be done
+        if (stepsLeft > 0) {
+            thread_data->steps++;
+            stepsLeft--;
+        }
+
+        //Make thread
+        pthread_create(&tid[i], NULL, threadsGame, (void *)thread_data);
+        start += thread_data->steps;
+    }
+
+    // Wait the end of the threads
+    for (int i = 0; i < NUM_THREADS; i++) {
+      pthread_join(tid[i], NULL);
+    }
+}
+
+void * threadsGame(void * arg)
+{
+    // Start the lock of the mutex here cause the threads are sharing
+    // information and the most important is that if i dont lock it it frees
+    // the memory of image multiple times and makes a sementation fault
+    pthread_mutex_lock(&lock);
+
+    // Recive the information of the thread
+    data_t * thread_data = (data_t *) arg;
+
+    // Local variable for an image structure
+    image_t destination = {0, 0, NULL};
+
+    // Local variable for using easier the matrix array
+    int double_matrix[3][3] = {0};
+
+    // Copy the size of the image
+    destination.height = thread_data->image->height;
+    destination.width = thread_data->image->width;
+
+    // Get the memory for the image data
+    allocateImage(&destination);
+
+    // Check the neighbors of all pixels
+    for (int row = 0; row < thread_data->image->height; row++)
+    {
+        for (int column = 0; column < thread_data->image->width; column++)
+        {
+            for (int matrixRow = -1; matrixRow <= 1; matrixRow++) {
+                for (int matrixColumn = -1; matrixColumn <= 1; matrixColumn++) {
+                    int r = row+matrixRow;
+                    int c = column+matrixColumn;
+                    if (r < 0) {
+                        r = thread_data->image->height - 1;
+                    } else if (r == thread_data->image->height) {
+                        r = 0;
+                    }
+                    if (c < 0) {
+                        c = thread_data->image->width - 1;
+                    } else if (r == thread_data->image->width) {
+                        c = 0;
+                    }
+                    double_matrix[matrixRow+1][matrixColumn+1] = thread_data->image->pixels[r][c].value;
+                }
+            }
+            destination.pixels[row][column].value = checkNeighbors(double_matrix);
+        }
+    }
+
+    // Free the previous memory data
+    freeImage(thread_data->image);
+
+    // Copy the results back to the pointer received
+    *thread_data->image = destination;
+
+    // Unlock the mutex
+    pthread_mutex_unlock(&lock);
+
+    // Exit the thread
+    pthread_exit(NULL);
+}
+
 // Function to check the neighbors and return the value of the
 // statement for the pixel
 int checkNeighbors(int matrix[3][3])
@@ -237,7 +336,6 @@ int checkNeighbors(int matrix[3][3])
 
     return live * value;
 }
-
 
 // Write the data in the image structure into a new PGM file
 // Receive a pointer to the image, to avoid having to copy the data
