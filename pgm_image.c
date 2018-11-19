@@ -186,9 +186,9 @@ void playGameThreads(image_t * image)
     pthread_t tid[NUM_THREADS];
 
     // Make the calculations to split the iterations
+    int start = 0;
     int stepsPerThread = image->height / NUM_THREADS;
     int stepsLeft = image->height % NUM_THREADS;
-    int start = 0;
 
     for (int i = 0; i < NUM_THREADS; i++) {
         // Allocate memory for the information that is going to be
